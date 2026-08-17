@@ -6,12 +6,36 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
     timeout-minutes: 1800
     
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+
+      - name: 将 uup / output 目录挂到 D 盘
+        shell: pwsh
+        run: |
+          $dRoot = "D:\a\${{ github.run_id }}"
+          New-Item -ItemType Directory -Force -Path "$dRoot\uup"
+          New-Item -ItemType Directory -Force -Path "$dRoot\output"
+
+          # 如果 workspace 里已经存在同名目录（checkout 不会创建，但保险起见），先删掉
+          if (Test-Path "$env:GITHUB_WORKSPACE\uup") { 
+            Remove-Item "$env:GITHUB_WORKSPACE\uup" -Recurse -Force 
+          }
+          if (Test-Path "$env:GITHUB_WORKSPACE\output") { 
+            Remove-Item "$env:GITHUB_WORKSPACE\output" -Recurse -Force 
+          }
+
+          # 创建 junction（目录联接），对程序完全透明
+          cmd /c mklink /J "$env:GITHUB_WORKSPACE\uup" "$dRoot\uup"
+          cmd /c mklink /J "$env:GITHUB_WORKSPACE\output" "$dRoot\output"
+
+          Write-Host "=== D 盘可用空间 ==="
+          Get-PSDrive D | Select-Object Used,Free
+
 
 
       - name: Extract UUP package
